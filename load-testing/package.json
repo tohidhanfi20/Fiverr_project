@@ -1,0 +1,12 @@
+{
+  "name": "load-testing",
+  "version": "1.0.0",
+  "description": "Load testing scripts for education platform",
+  "scripts": {
+    "test": "k6 run load-test.js"
+  },
+  "dependencies": {
+    "k6": "^0.47.0"
+  }
+}
+
