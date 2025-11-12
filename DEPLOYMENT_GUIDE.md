@@ -3,11 +3,11 @@
 ## Prerequisites
 
 1. **AWS Account** with appropriate permissions
-2. **GCP Account** with billing enabled
+2. **Azure Account** with billing enabled
 3. **Terraform** >= 1.5.0
 4. **kubectl** >= 1.28
 5. **AWS CLI** configured
-6. **GCP CLI** configured
+6. **Azure CLI** configured
 7. **Docker** installed
 8. **Git** repository for GitOps
 
@@ -123,7 +123,7 @@ chmod +x scripts/*.sh
 ### Push to Registries
 
 ```bash
-# Update ECR_REGISTRY and GCR_REGISTRY in scripts/push-images.sh
+# Update ECR_REGISTRY and ACR_REGISTRY in scripts/push-images.sh
 ./scripts/push-images.sh
 ```
 

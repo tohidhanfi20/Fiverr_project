@@ -354,7 +354,7 @@ This platform enables students to browse courses, enroll in classes, track their
 
 ### 9.3 CI/CD Pipeline (Recommended)
 - **GitHub Actions / GitLab CI**: Build and test
-- **Container Registry**: ECR / GCR for images
+- **Container Registry**: ECR / ACR for images
 - **ArgoCD**: Continuous deployment
 
 ## 10. Monitoring & Alerting

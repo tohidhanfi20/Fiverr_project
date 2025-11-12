@@ -41,7 +41,7 @@ A comprehensive multi-cloud microservices application for an online learning man
 - Terraform >= 1.5.0
 - kubectl >= 1.28
 - AWS CLI configured
-- GCP CLI configured
+- Azure CLI configured
 - Docker
 - Node.js 18+ (for microservices)
 - Python 3.9+ (for some services)
@@ -57,8 +57,8 @@ terraform init
 terraform plan
 terraform apply
 
-# Provision GCP infrastructure
-cd ../gcp
+# Provision Azure infrastructure
+cd ../azure
 terraform init
 terraform plan
 terraform apply
@@ -96,7 +96,7 @@ kubectl apply -f observability/loki/
 # Build all services
 ./scripts/build-images.sh
 
-# Push to ECR/GCR
+# Push to ECR/ACR
 ./scripts/push-images.sh
 ```
 

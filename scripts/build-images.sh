@@ -5,6 +5,7 @@
 set -e
 
 REGISTRY=${ECR_REGISTRY:-"your-ecr-registry"}
+ACR_REGISTRY=${ACR_REGISTRY:-"your-registry.azurecr.io"}
 AWS_REGION=${AWS_REGION:-"us-east-1"}
 
 SERVICES=(
@@ -25,7 +26,7 @@ done
 
 echo "Building analytics-service..."
 docker build -t analytics-service:latest ./microservices/analytics-service
-docker tag analytics-service:latest $GCR_REGISTRY/analytics-service:latest
+docker tag analytics-service:latest $ACR_REGISTRY/analytics-service:latest
 
 echo "All images built successfully!"
 

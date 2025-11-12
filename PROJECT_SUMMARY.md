@@ -8,7 +8,7 @@ This project implements a comprehensive cloud-based education platform with **6 
 
 ### ✅ Infrastructure as Code (IaC)
 - **Terraform** scripts for all AWS infrastructure (VPC, EKS, RDS, DynamoDB, S3, MSK, Lambda, ALB)
-- **Terraform** scripts for all GCP infrastructure (GKE, Cloud SQL, Cloud Storage, Dataproc)
+- **Terraform** scripts for all Azure infrastructure (AKS, Azure PostgreSQL, Blob Storage, HDInsight)
 - All infrastructure provisioned exclusively via Terraform
 
 ### ✅ Microservices (6)
@@ -89,7 +89,7 @@ This project implements a comprehensive cloud-based education platform with **6 
 │
 ├── infrastructure/            # Terraform IaC
 │   ├── aws/                   # AWS infrastructure modules
-│   └── gcp/                   # GCP infrastructure
+│   └── azure/                 # Azure infrastructure
 │
 ├── k8s/                       # Kubernetes manifests
 │   └── base/                  # Base manifests with HPA
@@ -189,8 +189,8 @@ This project implements a comprehensive cloud-based education platform with **6 
 
 ## Notes
 
-- Replace placeholder values (ECR_REGISTRY, GCR_REGISTRY, secrets, etc.) with actual values
-- Configure AWS and GCP credentials before running Terraform
+- Replace placeholder values (ECR_REGISTRY, ACR_REGISTRY, secrets, etc.) with actual values
+- Configure AWS and Azure credentials before running Terraform
 - Set up Git repository for ArgoCD before deploying
 - Update Kafka broker addresses in ConfigMaps
 - Configure database credentials in Kubernetes secrets

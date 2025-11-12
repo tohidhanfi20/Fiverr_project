@@ -5,7 +5,7 @@
 set -e
 
 ECR_REGISTRY=${ECR_REGISTRY:-"your-ecr-registry"}
-GCR_REGISTRY=${GCR_REGISTRY:-"gcr.io/your-project"}
+ACR_REGISTRY=${ACR_REGISTRY:-"your-registry.azurecr.io"}
 AWS_REGION=${AWS_REGION:-"us-east-1"}
 
 SERVICES=(
@@ -25,11 +25,11 @@ for service in "${SERVICES[@]}"; do
   docker push $ECR_REGISTRY/$service:latest
 done
 
-echo "Logging in to GCR..."
-gcloud auth configure-docker
+echo "Logging in to Azure Container Registry..."
+az acr login --name $(echo $ACR_REGISTRY | cut -d'.' -f1)
 
-echo "Pushing analytics-service to GCR..."
-docker push $GCR_REGISTRY/analytics-service:latest
+echo "Pushing analytics-service to ACR..."
+docker push $ACR_REGISTRY/analytics-service:latest
 
 echo "All images pushed successfully!"
 
