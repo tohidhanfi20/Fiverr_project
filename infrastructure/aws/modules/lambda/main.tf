@@ -30,7 +30,7 @@ resource "aws_lambda_permission" "s3_invoke" {
   source_arn    = "arn:aws:s3:::${var.s3_bucket_id}"
 }
 
-# Notification Processor Lambda
+# Notification Processor Lambda (for course completions and other events)
 data "archive_file" "notification_processor" {
   type        = "zip"
   source_dir  = "${path.module}/../../../../serverless/aws-lambda/notification-processor"

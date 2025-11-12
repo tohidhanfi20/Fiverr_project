@@ -1,7 +1,6 @@
 const express = require('express');
 const { Pool } = require('pg');
 const { Kafka } = require('kafkajs');
-const axios = require('axios');
 const promClient = require('prom-client');
 const winston = require('winston');
 
@@ -53,8 +52,8 @@ const kafka = new Kafka({
 const producer = kafka.producer();
 producer.connect().catch(console.error);
 
-// Payment service URL for gRPC (fallback to REST)
-const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL || 'http://payment-service:8083';
+// Note: Enrollment no longer requires payment processing
+// Enrollment is simplified - just creates enrollment record
 
 // Middleware
 app.use((req, res, next) => {
@@ -91,63 +90,37 @@ app.post('/api/enrollments', async (req, res) => {
       return res.status(409).json({ error: 'Already enrolled' });
     }
 
-    // Get course price
-    const courseResult = await pool.query('SELECT price FROM courses WHERE id = $1', [course_id]);
+    // Verify course exists
+    const courseResult = await pool.query('SELECT id FROM courses WHERE id = $1', [course_id]);
     if (courseResult.rows.length === 0) {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    const price = courseResult.rows[0].price;
-
-    // Create enrollment (pending payment)
+    // Create enrollment (simplified - no payment processing)
     const enrollmentResult = await pool.query(
       'INSERT INTO enrollments (user_id, course_id, status, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
-      [user_id, course_id, 'pending']
+      [user_id, course_id, 'completed']
     );
 
     const enrollment = enrollmentResult.rows[0];
 
-    // Call payment service via REST (gRPC can be added later)
-    try {
-      const paymentResponse = await axios.post(`${PAYMENT_SERVICE_URL}/api/payments`, {
-        user_id,
-        course_id,
-        amount: price,
-        enrollment_id: enrollment.id
-      });
+    // Publish event
+    await producer.send({
+      topic: 'enrollment-events',
+      messages: [{
+        key: enrollment.id.toString(),
+        value: JSON.stringify({
+          eventType: 'ENROLLMENT_COMPLETED',
+          enrollmentId: enrollment.id,
+          userId: user_id,
+          courseId: course_id,
+          timestamp: new Date().toISOString()
+        })
+      }]
+    });
 
-      // Update enrollment status
-      await pool.query(
-        'UPDATE enrollments SET status = $1, payment_id = $2 WHERE id = $3',
-        ['completed', paymentResponse.data.id, enrollment.id]
-      );
-
-      enrollment.status = 'completed';
-      enrollment.payment_id = paymentResponse.data.id;
-
-      // Publish event
-      await producer.send({
-        topic: 'enrollment-events',
-        messages: [{
-          key: enrollment.id.toString(),
-          value: JSON.stringify({
-            eventType: 'ENROLLMENT_COMPLETED',
-            enrollmentId: enrollment.id,
-            userId: user_id,
-            courseId: course_id,
-            timestamp: new Date().toISOString()
-          })
-        }]
-      });
-
-      logger.info('Enrollment completed', { enrollmentId: enrollment.id });
-      res.status(201).json(enrollment);
-    } catch (paymentError) {
-      // Payment failed
-      await pool.query('UPDATE enrollments SET status = $1 WHERE id = $2', ['failed', enrollment.id]);
-      logger.error('Payment failed', { error: paymentError.message });
-      res.status(402).json({ error: 'Payment failed', enrollment_id: enrollment.id });
-    }
+    logger.info('Enrollment completed', { enrollmentId: enrollment.id });
+    res.status(201).json(enrollment);
   } catch (error) {
     logger.error('Create enrollment error', { error: error.message });
     res.status(500).json({ error: 'Internal server error' });

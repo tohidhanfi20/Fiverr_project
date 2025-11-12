@@ -58,11 +58,11 @@ data:
           labels:
             service: 'enrollment-service'
 
-      - job_name: 'payment-service'
+      - job_name: 'progress-service'
         static_configs:
-        - targets: ['payment-service:8083']
+        - targets: ['progress-service:8083']
           labels:
-            service: 'payment-service'
+            service: 'progress-service'
 
       - job_name: 'kubernetes-apiservers'
         kubernetes_sd_configs:

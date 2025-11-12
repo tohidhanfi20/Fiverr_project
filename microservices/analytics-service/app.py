@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 from prometheus_client import generate_latest, Counter, Histogram, REGISTRY
 from kafka import KafkaConsumer
 import psycopg2
-from google.cloud import storage
+from azure.storage.blob import BlobServiceClient
 import json
 import os
 import threading
@@ -18,7 +18,7 @@ http_request_duration = Histogram('http_request_duration_seconds', 'HTTP request
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Database connection (GCP Cloud SQL)
+# Database connection (Azure Database for PostgreSQL)
 def get_db_connection():
     return psycopg2.connect(
         host=os.getenv('DB_HOST', 'localhost'),
@@ -28,9 +28,17 @@ def get_db_connection():
         password=os.getenv('DB_PASSWORD', 'password')
     )
 
-# GCS client
-storage_client = storage.Client()
-bucket_name = os.getenv('GCS_BUCKET', 'analytics-data')
+# Azure Blob Storage client
+storage_account_name = os.getenv('AZURE_STORAGE_ACCOUNT_NAME', '')
+storage_account_key = os.getenv('AZURE_STORAGE_ACCOUNT_KEY', '')
+container_name = os.getenv('AZURE_STORAGE_CONTAINER', 'analytics-data')
+
+blob_service_client = None
+if storage_account_name and storage_account_key:
+    blob_service_client = BlobServiceClient(
+        account_url=f"https://{storage_account_name}.blob.core.windows.net",
+        credential=storage_account_key
+    )
 
 # Kafka consumer for analytics results
 def consume_analytics_results():
@@ -57,11 +65,14 @@ def consume_analytics_results():
             cursor.close()
             conn.close()
             
-            # Optionally store in GCS
-            if os.getenv('STORE_IN_GCS', 'false').lower() == 'true':
-                bucket = storage_client.bucket(bucket_name)
-                blob = bucket.blob(f"results/{result.get('windowStart')}.json")
-                blob.upload_from_string(json.dumps(result))
+            # Optionally store in Azure Blob Storage
+            if os.getenv('STORE_IN_AZURE', 'false').lower() == 'true' and blob_service_client:
+                blob_name = f"results/{result.get('windowStart')}.json"
+                blob_client = blob_service_client.get_blob_client(
+                    container=container_name,
+                    blob=blob_name
+                )
+                blob_client.upload_blob(json.dumps(result), overwrite=True)
             
         except Exception as e:
             logger.error(f'Error processing analytics result: {e}')

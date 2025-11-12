@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project implements a comprehensive cloud-based education platform with **6 microservices** deployed across **AWS and Google Cloud Platform**, meeting all specified requirements.
+This project implements a comprehensive cloud-based education platform with **6 microservices** deployed across **AWS and Microsoft Azure**, meeting all specified requirements.
 
 ## Requirements Met
 
@@ -16,16 +16,16 @@ This project implements a comprehensive cloud-based education platform with **6 
 2. **User Service** - User management and authentication (Node.js)
 3. **Course Service** - Course catalog and management (Node.js)
 4. **Enrollment Service** - Student enrollments (Node.js)
-5. **Payment Service** - Payment processing and notifications (Node.js)
-6. **Analytics Service** - Analytics on GCP (Python/Flask)
+5. **Progress Service** - Student progress tracking (Node.js)
+6. **Analytics Service** - Analytics on Azure (Python/Flask)
 
 ### ✅ Multi-Cloud Deployment
 - **AWS (Provider A)**: Main services, EKS, RDS, DynamoDB, S3, MSK, Lambda
-- **GCP (Provider B)**: Analytics service, Dataproc (Flink), Cloud SQL, Cloud Storage
+- **Azure (Provider B)**: Analytics service, HDInsight (Flink), Azure PostgreSQL, Blob Storage
 
 ### ✅ Managed Kubernetes
 - **AWS EKS** for main microservices
-- **GCP GKE** for analytics service
+- **Azure AKS** for analytics service
 - **Horizontal Pod Autoscalers (HPA)** configured for:
   - User Service (2-10 pods, CPU 70%, Memory 80%)
   - Course Service (2-10 pods, CPU 70%, Memory 80%)
@@ -37,7 +37,7 @@ This project implements a comprehensive cloud-based education platform with **6 
 - No direct kubectl apply for service deployment
 
 ### ✅ Real-time Stream Processing
-- **Apache Flink** job on Google Dataproc
+- **Apache Flink** job on Azure HDInsight
 - Consumes from Kafka `learning-events` topic
 - Performs 1-minute time-windowed aggregation (unique users count)
 - Publishes results to `analytics-results` Kafka topic
@@ -45,19 +45,18 @@ This project implements a comprehensive cloud-based education platform with **6 
 
 ### ✅ Serverless Functions
 - **AWS Lambda - File Processor**: Processes S3 uploads (course materials)
-- **AWS Lambda - Notification Processor**: Async email/SMS sending via SQS
+- **AWS Lambda - Notification Processor**: Async email/SMS sending for course completions via SQS
 
 ### ✅ Cloud Storage Products
 - **Amazon S3**: Object storage for course materials
-- **Amazon RDS (PostgreSQL)**: Relational data (users, courses, enrollments, payments)
-- **Amazon DynamoDB**: High-throughput data (payment tokens, notifications)
-- **GCP Cloud SQL (PostgreSQL)**: Analytics results
-- **GCP Cloud Storage**: Analytics data exports
+- **Amazon RDS (PostgreSQL)**: Relational data (users, courses, enrollments, progress)
+- **Amazon DynamoDB**: High-throughput data (notifications)
+- **Azure Database for PostgreSQL**: Analytics results
+- **Azure Blob Storage**: Analytics data exports
 
 ### ✅ Communication Mechanisms
 - **REST APIs**: Primary communication
-- **gRPC**: High-performance internal calls (Enrollment ↔ Payment)
-- **Kafka**: Event streaming (user-events, course-events, enrollment-events, payment-events, learning-events, analytics-results)
+- **Kafka**: Event streaming (user-events, course-events, enrollment-events, progress-events, learning-events, analytics-results)
 
 ### ✅ Observability Stack
 - **Prometheus**: Metrics collection from all services
@@ -85,7 +84,7 @@ This project implements a comprehensive cloud-based education platform with **6 
 │   ├── user-service/
 │   ├── course-service/
 │   ├── enrollment-service/
-│   ├── payment-service/
+│   ├── progress-service/
 │   └── analytics-service/
 │
 ├── infrastructure/            # Terraform IaC
@@ -159,7 +158,7 @@ This project implements a comprehensive cloud-based education platform with **6 
 
 ### Infrastructure
 - **AWS**: EKS, RDS, DynamoDB, S3, MSK, Lambda, ALB
-- **GCP**: GKE, Cloud SQL, Cloud Storage, Dataproc
+- **Azure**: AKS, Azure PostgreSQL, Blob Storage, HDInsight
 
 ### DevOps
 - **Terraform**: Infrastructure as Code
@@ -169,13 +168,13 @@ This project implements a comprehensive cloud-based education platform with **6 
 - **Loki**: Logging
 
 ### Databases
-- **PostgreSQL**: RDS, Cloud SQL
+- **PostgreSQL**: RDS, Azure Database for PostgreSQL
 - **DynamoDB**: NoSQL
 - **Kafka**: Event streaming
 
 ## Next Steps
 
-1. **Deploy Infrastructure**: Run Terraform to provision AWS and GCP resources
+1. **Deploy Infrastructure**: Run Terraform to provision AWS and Azure resources
 2. **Build Images**: Build and push Docker images to registries
 3. **Deploy Services**: Use ArgoCD to deploy all services
 4. **Configure Monitoring**: Set up Grafana dashboards

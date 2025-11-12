@@ -9,9 +9,12 @@ exports.handler = async (event) => {
   try {
     for (const record of event.Records) {
       const message = JSON.parse(record.body);
-      const { userId, type, message: notificationMessage } = message;
+      const { userId, type, message: notificationMessage, eventType } = message;
       
-      console.log(`Processing notification for user ${userId}, type: ${type}`);
+      // Handle both direct messages and event-based messages
+      const eventTypeToUse = eventType || type;
+      
+      console.log(`Processing notification for user ${userId}, type: ${eventTypeToUse}`);
       
       // Get user email (in production, fetch from user service)
       // For now, using a placeholder
@@ -26,11 +29,11 @@ exports.handler = async (event) => {
           },
           Message: {
             Subject: {
-              Data: 'Education Platform Notification'
+              Data: getNotificationSubject(eventTypeToUse)
             },
             Body: {
               Text: {
-                Data: notificationMessage || 'You have a new notification.'
+                Data: notificationMessage || generateNotificationMessage(eventTypeToUse, message)
               }
             }
           }
@@ -73,4 +76,30 @@ exports.handler = async (event) => {
     throw error;
   }
 };
+
+function getNotificationSubject(type) {
+  switch (type) {
+    case 'COURSE_COMPLETED':
+      return 'Course Completed - Congratulations!';
+    case 'PROGRESS_UPDATED':
+      return 'Progress Update';
+    case 'ENROLLMENT_COMPLETED':
+      return 'Enrollment Confirmed';
+    default:
+      return 'Education Platform Notification';
+  }
+}
+
+function generateNotificationMessage(type, data) {
+  switch (type) {
+    case 'COURSE_COMPLETED':
+      return `Congratulations! You have successfully completed the course.`;
+    case 'PROGRESS_UPDATED':
+      return `Your progress has been updated. You are ${data.progressPercentage || 0}% complete.`;
+    case 'ENROLLMENT_COMPLETED':
+      return `You have successfully enrolled in the course. Start learning now!`;
+    default:
+      return 'You have a new notification.';
+  }
+}
 

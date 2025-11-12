@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: payment-service
+  name: progress-service
   labels:
-    app: payment-service
+    app: progress-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: payment-service
+      app: progress-service
   template:
     metadata:
       labels:
-        app: payment-service
+        app: progress-service
     spec:
       containers:
-      - name: payment-service
-        image: <ECR_REGISTRY>/payment-service:latest
+      - name: progress-service
+        image: <ECR_REGISTRY>/progress-service:latest
         ports:
         - containerPort: 8083
         env:
@@ -47,17 +47,6 @@ spec:
             configMapKeyRef:
               name: kafka-config
               key: brokers
-        - name: AWS_REGION
-          value: "us-east-1"
-        - name: DYNAMODB_PAYMENT_TOKENS_TABLE
-          value: "payment-tokens-production"
-        - name: DYNAMODB_NOTIFICATIONS_TABLE
-          value: "notifications-production"
-        - name: SQS_NOTIFICATION_QUEUE
-          valueFrom:
-            configMapKeyRef:
-              name: app-config
-              key: sqs-queue-url
         resources:
           requests:
             cpu: 200m
@@ -82,10 +71,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: payment-service
+  name: progress-service
 spec:
   selector:
-    app: payment-service
+    app: progress-service
   ports:
   - port: 8083
     targetPort: 8083

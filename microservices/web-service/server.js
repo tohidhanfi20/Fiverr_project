@@ -39,6 +39,7 @@ const logger = winston.createLogger({
 const USER_SERVICE = process.env.USER_SERVICE_URL || 'http://user-service:8080';
 const COURSE_SERVICE = process.env.COURSE_SERVICE_URL || 'http://course-service:8081';
 const ENROLLMENT_SERVICE = process.env.ENROLLMENT_SERVICE_URL || 'http://enrollment-service:8082';
+const PROGRESS_SERVICE = process.env.PROGRESS_SERVICE_URL || 'http://progress-service:8083';
 
 // Kafka producer for learning events
 const kafka = new Kafka({
@@ -109,6 +110,34 @@ app.get('/api/courses/:id', async (req, res) => {
 app.post('/api/enrollments', async (req, res) => {
   try {
     const response = await axios.post(`${ENROLLMENT_SERVICE}/api/enrollments`, req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
+// Progress endpoints
+app.post('/api/progress', async (req, res) => {
+  try {
+    const response = await axios.post(`${PROGRESS_SERVICE}/api/progress`, req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
+app.get('/api/progress/user/:userId', async (req, res) => {
+  try {
+    const response = await axios.get(`${PROGRESS_SERVICE}/api/progress/user/${req.params.userId}`);
+    res.json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
+app.get('/api/progress/user/:userId/course/:courseId', async (req, res) => {
+  try {
+    const response = await axios.get(`${PROGRESS_SERVICE}/api/progress/user/${req.params.userId}/course/${req.params.courseId}`);
     res.json(response.data);
   } catch (error) {
     res.status(error.response?.status || 500).json({ error: error.message });

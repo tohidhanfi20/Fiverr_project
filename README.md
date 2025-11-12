@@ -1,11 +1,11 @@
 # Cloud-Based Education Platform
 
-A comprehensive multi-cloud microservices application for an online learning management system, deployed on AWS and Google Cloud Platform.
+A comprehensive multi-cloud microservices application for an online learning management system, deployed on AWS and Microsoft Azure.
 
 ## Architecture Overview
 
-- **6 Microservices** deployed on AWS EKS and GCP GKE
-- **Real-time Stream Processing** using Apache Flink on Google Dataproc
+- **6 Microservices** deployed on AWS EKS and Azure AKS
+- **Real-time Stream Processing** using Apache Flink on Azure HDInsight
 - **Infrastructure as Code** using Terraform
 - **GitOps** deployment with ArgoCD
 - **Comprehensive Observability** with Prometheus, Grafana, and Loki
@@ -21,11 +21,11 @@ A comprehensive multi-cloud microservices application for an online learning man
 │   ├── user-service/           # User management
 │   ├── course-service/         # Course catalog
 │   ├── enrollment-service/     # Enrollment management
-│   ├── payment-service/        # Payment processing & notifications
-│   └── analytics-service/      # Analytics (GCP)
+│   ├── progress-service/       # Student progress tracking
+│   └── analytics-service/      # Analytics (Azure)
 ├── infrastructure/             # Terraform IaC
 │   ├── aws/                    # AWS infrastructure
-│   └── gcp/                    # GCP infrastructure
+│   └── azure/                  # Azure infrastructure
 ├── k8s/                        # Kubernetes manifests
 │   ├── base/                   # Base manifests
 │   └── overlays/               # Environment overlays
@@ -70,8 +70,8 @@ terraform apply
 # AWS EKS
 aws eks update-kubeconfig --name education-platform-eks --region us-east-1
 
-# GCP GKE
-gcloud container clusters get-credentials education-platform-gke --region us-central1
+# Azure AKS
+az aks get-credentials --resource-group education-platform-analytics-rg --name education-platform-analytics-aks
 ```
 
 ### 3. Deploy GitOps (ArgoCD)
@@ -132,15 +132,14 @@ argocd app sync <app-name>
 - **Database**: RDS PostgreSQL
 - **Endpoints**: `/api/enrollments/*`
 
-### Payment Service
+### Progress Service
 - **Port**: 8083
 - **Database**: RDS PostgreSQL
-- **NoSQL**: DynamoDB
-- **Endpoints**: `/api/payments/*`, `/api/notifications/*`
+- **Endpoints**: `/api/progress/*`
 
-### Analytics Service (GCP)
+### Analytics Service (Azure)
 - **Port**: 8085
-- **Database**: GCP Cloud SQL
+- **Database**: Azure Database for PostgreSQL
 - **Endpoints**: `/api/analytics/*`
 
 ## Load Testing

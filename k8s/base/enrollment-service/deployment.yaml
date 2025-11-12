@@ -47,8 +47,6 @@ spec:
             configMapKeyRef:
               name: kafka-config
               key: brokers
-        - name: PAYMENT_SERVICE_URL
-          value: "http://payment-service:8083"
         resources:
           requests:
             cpu: 200m

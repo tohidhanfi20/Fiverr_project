@@ -9,7 +9,7 @@ resources:
   - web-service/deployment.yaml
   - web-service/hpa.yaml
   - enrollment-service/deployment.yaml
-  - payment-service/deployment.yaml
+  - progress-service/deployment.yaml
   - configmaps.yaml
   - secrets.yaml
 

@@ -11,7 +11,7 @@ SERVICES=(
   "user-service"
   "course-service"
   "enrollment-service"
-  "payment-service"
+  "progress-service"
   "web-service"
 )
 

@@ -13,4 +13,5 @@ metadata:
 data:
   s3-bucket: "education-platform-storage"
   sqs-queue-url: "https://sqs.us-east-1.amazonaws.com/ACCOUNT_ID/notification-queue-production"
+  # Note: SQS queue is used for async notifications (course completions, etc.)
 

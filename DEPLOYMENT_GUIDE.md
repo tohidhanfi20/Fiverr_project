@@ -37,19 +37,21 @@ terraform apply
 
 **Note**: Save the outputs (EKS endpoint, RDS endpoint, MSK brokers, etc.) for later use.
 
-### GCP Infrastructure
+### Azure Infrastructure
 
 ```bash
-cd infrastructure/gcp
+cd infrastructure/azure
 
 # Initialize Terraform
 terraform init
 
 # Create terraform.tfvars
 cat > terraform.tfvars <<EOF
-gcp_project_id = "your-gcp-project-id"
-gcp_region = "us-central1"
+azure_subscription_id = "your-azure-subscription-id"
+azure_tenant_id = "your-azure-tenant-id"
+azure_region = "eastus"
 db_password = "your-secure-password"
+hdinsight_password = "your-hdinsight-password"
 EOF
 
 # Plan
@@ -67,10 +69,10 @@ terraform apply
 aws eks update-kubeconfig --name education-platform-eks --region us-east-1
 ```
 
-### GCP GKE
+### Azure AKS
 
 ```bash
-gcloud container clusters get-credentials education-platform-analytics-gke --region us-central1
+az aks get-credentials --resource-group education-platform-analytics-rg --name education-platform-analytics-aks
 ```
 
 ## Step 3: Set Up Database
@@ -82,28 +84,28 @@ gcloud container clusters get-credentials education-platform-analytics-gke --reg
 psql -h <RDS_ENDPOINT> -U postgres -d education_db -f database/schema.sql
 ```
 
-### GCP Cloud SQL
+### Azure Database for PostgreSQL
 
 ```bash
-# Connect to Cloud SQL and run analytics schema
-gcloud sql connect education-platform-analytics-db --user=analytics_user
-# Then run the analytics database schema from database/schema.sql
+# Connect to Azure PostgreSQL and run analytics schema
+psql -h education-platform-analytics-db.postgres.database.azure.com -U analytics_admin@education-platform-analytics-db -d analytics_db -f database/schema.sql
 ```
 
-## Step 4: Create Kubernetes Secrets and ConfigMaps
+## Step 4: Update Kubernetes Secrets and ConfigMaps
 
-### Update Secrets
+**IMPORTANT**: According to GitOps requirements, we should NOT use `kubectl apply` for service deployments. However, Secrets and ConfigMaps can be managed via ArgoCD or applied once during initial setup.
 
+### Option A: Managed by ArgoCD (Recommended)
+Secrets and ConfigMaps are included in `k8s/base/kustomization.yaml`, so ArgoCD will manage them automatically.
+
+### Option B: One-time Initial Setup (If needed)
 ```bash
 # Edit k8s/base/secrets.yaml with actual values
-kubectl apply -f k8s/base/secrets.yaml
-```
-
-### Update ConfigMaps
-
-```bash
 # Edit k8s/base/configmaps.yaml with actual Kafka brokers and SQS URL
-kubectl apply -f k8s/base/configmaps.yaml
+# Then commit and push to Git - ArgoCD will sync automatically
+git add k8s/base/secrets.yaml k8s/base/configmaps.yaml
+git commit -m "Update secrets and configmaps"
+git push origin main
 ```
 
 ## Step 5: Build and Push Docker Images
@@ -129,23 +131,54 @@ chmod +x scripts/*.sh
 
 Replace `<ECR_REGISTRY>` in all deployment.yaml files with your actual ECR registry URL.
 
-## Step 6: Deploy Observability Stack
+## Step 6: Deploy Observability Stack via GitOps
+
+**IMPORTANT**: To comply with GitOps requirements, observability stack should also be managed by ArgoCD.
+
+### Option A: Add to ArgoCD (Recommended)
+Create an ArgoCD Application for observability:
 
 ```bash
-# Deploy Prometheus
+# Create observability ArgoCD app
+kubectl apply -f - <<EOF
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-stack
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/tohidhanfi20/Fiverr_project.git
+    targetRevision: main
+    path: observability
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+EOF
+```
+
+### Option B: One-time Setup (If observability is considered infrastructure)
+If observability is treated as infrastructure (not application), you can use kubectl once:
+```bash
+kubectl create namespace monitoring
 kubectl apply -f observability/prometheus/
-
-# Deploy Grafana
 kubectl apply -f observability/grafana/
-
-# Deploy Loki (if using)
-# kubectl apply -f observability/loki/
+kubectl apply -f observability/loki/
 ```
 
 ## Step 7: Deploy GitOps (ArgoCD)
 
+**NOTE**: Installing ArgoCD itself requires `kubectl` - this is acceptable as ArgoCD is infrastructure, not an application service.
+
 ```bash
-# Install ArgoCD
+# Install ArgoCD (Infrastructure - kubectl is acceptable)
 kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
@@ -159,26 +192,31 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 kubectl port-forward svc/argocd-server -n argocd 8080:443
 
 # Update gitops/argocd-app.yaml with your Git repository URL
+# Then apply ArgoCD applications (this is configuring GitOps, not deploying services)
 kubectl apply -f gitops/argocd-app.yaml
+kubectl apply -f gitops/observability-app.yaml
 ```
 
-## Step 8: Deploy Flink Job to Dataproc
+**After this point, ALL microservice deployments are handled by ArgoCD automatically from Git!**
+
+## Step 8: Deploy Flink Job to Azure HDInsight
 
 ```bash
 # Build Flink job JAR
 cd stream-processing
 mvn clean package
 
-# Upload JAR to GCS
-gsutil cp target/learning-analytics-flink-1.0.0.jar gs://your-bucket/flink-jobs/
+# Upload JAR to Azure Blob Storage
+az storage blob upload \
+  --account-name <storage-account-name> \
+  --container-name analytics-data \
+  --name flink-jobs/learning-analytics-flink-1.0.0.jar \
+  --file target/learning-analytics-flink-1.0.0.jar
 
-# Submit job to Dataproc
-gcloud dataproc jobs submit spark \
-  --cluster=education-platform-flink \
-  --region=us-central1 \
-  --class=com.education.analytics.LearningAnalyticsJob \
-  --jars=gs://your-bucket/flink-jobs/learning-analytics-flink-1.0.0.jar \
-  --properties=spark.executor.memory=2g,spark.executor.cores=2
+# Submit job to HDInsight Flink cluster
+# Access HDInsight cluster via SSH or Ambari UI
+# Submit Flink job using Flink CLI or REST API
+# Example: flink run -c com.education.analytics.LearningAnalyticsJob wasbs://analytics-data@<storage-account>.blob.core.windows.net/flink-jobs/learning-analytics-flink-1.0.0.jar
 ```
 
 ## Step 9: Deploy Lambda Functions

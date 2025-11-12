@@ -29,22 +29,27 @@ CREATE TABLE IF NOT EXISTS enrollments (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) NOT NULL,
     course_id INTEGER REFERENCES courses(id) NOT NULL,
-    status VARCHAR(50) DEFAULT 'pending',
-    payment_id INTEGER,
+    status VARCHAR(50) DEFAULT 'completed',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, course_id)
 );
 
--- Payments table
-CREATE TABLE IF NOT EXISTS payments (
+-- Student Progress table
+CREATE TABLE IF NOT EXISTS student_progress (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) NOT NULL,
-    course_id INTEGER REFERENCES courses(id),
-    amount DECIMAL(10, 2) NOT NULL,
-    status VARCHAR(50) DEFAULT 'pending',
-    payment_method VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    course_id INTEGER REFERENCES courses(id) NOT NULL,
+    enrollment_id INTEGER REFERENCES enrollments(id),
+    content_id INTEGER,
+    progress_percentage DECIMAL(5, 2) DEFAULT 0.00,
+    time_spent INTEGER DEFAULT 0,
+    status VARCHAR(50) DEFAULT 'in_progress',
+    last_accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, course_id)
 );
 
 -- Indexes
@@ -53,9 +58,11 @@ CREATE INDEX IF NOT EXISTS idx_courses_instructor ON courses(instructor_id);
 CREATE INDEX IF NOT EXISTS idx_courses_category ON courses(category);
 CREATE INDEX IF NOT EXISTS idx_enrollments_user ON enrollments(user_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course_id);
-CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_progress_user ON student_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_progress_course ON student_progress(course_id);
+CREATE INDEX IF NOT EXISTS idx_progress_status ON student_progress(status);
 
--- Analytics database (GCP Cloud SQL)
+-- Analytics database (Azure Database for PostgreSQL)
 -- This would be in a separate database
 
 CREATE DATABASE IF NOT EXISTS analytics_db;

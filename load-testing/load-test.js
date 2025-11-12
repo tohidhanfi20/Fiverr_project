@@ -99,6 +99,25 @@ export default function () {
 
   requestDuration.add(eventRes.timings.duration);
 
+  sleep(1);
+
+  // Test progress update
+  const progressRes = http.post(`${BASE_URL}/api/progress`, JSON.stringify({
+    user_id: 1,
+    course_id: 1,
+    content_id: 1,
+    progress_percentage: 25,
+    time_spent: 300
+  }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  check(progressRes, {
+    'progress update status is 200': (r) => r.status === 200,
+  }) || errorRate.add(1);
+
+  requestDuration.add(progressRes.timings.duration);
+
   sleep(2);
 }
 

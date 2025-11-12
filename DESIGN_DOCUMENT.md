@@ -5,13 +5,13 @@
 ### 1.1 Domain Selection
 **Education Domain**: Online Learning Management System (LMS)
 
-This platform enables students to browse courses, enroll in classes, make payments, receive notifications, and provides real-time analytics on learning patterns. The system is designed to handle high traffic, scale automatically, and provide comprehensive observability.
+This platform enables students to browse courses, enroll in classes, track their learning progress, and provides real-time analytics on learning patterns. The system is designed to handle high traffic, scale automatically, and provide comprehensive observability.
 
 ### 1.2 Core Functionality
 - **User Management**: Student and instructor registration, authentication, profile management
 - **Course Management**: Course catalog, course creation, content management
 - **Enrollment Management**: Student course enrollments, enrollment tracking
-- **Payment Processing**: Secure payment handling, transaction management, and notifications
+- **Progress Tracking**: Student progress tracking, completion status, time spent on courses
 - **Analytics Service**: Real-time stream processing of learning events, user behavior analytics
 - **Web Frontend**: Public-facing web application for students and instructors
 
@@ -30,10 +30,11 @@ This platform enables students to browse courses, enroll in classes, make paymen
 - Application Load Balancer for public access
 - VPC with public/private subnets
 
-**Cloud Provider B (Google Cloud Platform)**:
-- Google Dataproc for Flink stream processing
-- Google Cloud Storage for analytics data
-- Google Cloud SQL (PostgreSQL) for analytics database
+**Cloud Provider B (Microsoft Azure)**:
+- Azure HDInsight for Flink stream processing
+- Azure Blob Storage for analytics data
+- Azure Database for PostgreSQL for analytics database
+- Azure Kubernetes Service (AKS) for analytics service
 - Cross-cloud connectivity via VPN or peering
 
 ### 2.2 Architecture Diagram (Textual)
@@ -58,7 +59,7 @@ This platform enables students to browse courses, enroll in classes, make paymen
         │  └────┬─────┘  └────┬─────┘  └────┬─────┘ │
         │       │             │             │        │
         │  ┌────▼─────┐  ┌────▼─────┐              │
-        │  │Enrollment│  │ Payment  │              │
+        │  │Enrollment│  │ Progress │              │
         │  │ Service  │  │ Service  │              │
         │  └────┬─────┘  └────┬─────┘              │
         └───────┼─────────────┼─────────────┼────────┘
@@ -74,17 +75,17 @@ This platform enables students to browse courses, enroll in classes, make paymen
                              │ Events
                              ▼
         ┌────────────────────────────────────────────┐
-        │    Google Cloud (Provider B)               │
+        │    Microsoft Azure (Provider B)            │
         │  ┌──────────────────────────────────────┐ │
-        │  │   Google Dataproc (Flink Cluster)     │ │
+        │  │   Azure HDInsight (Flink Cluster)     │ │
         │  │   - Consumes from Kafka                │ │
         │  │   - Time-windowed aggregations         │ │
         │  │   - Publishes to results topic         │ │
         │  └──────────────────────────────────────┘ │
         │  ┌──────────────────────────────────────┐ │
-        │  │   Analytics Service (GKE)             │ │
+        │  │   Analytics Service (AKS)             │ │
         │  │   - Consumes aggregated results       │ │
-        │  │   - Stores in Cloud SQL                │ │
+        │  │   - Stores in Azure PostgreSQL         │ │
         │  └──────────────────────────────────────┘ │
         └────────────────────────────────────────────┘
 
@@ -146,28 +147,31 @@ This platform enables students to browse courses, enroll in classes, make paymen
 - **Technology**: Node.js/Express or Python/FastAPI
 - **Database**: RDS PostgreSQL (enrollments)
 - **Deployment**: EKS (stateless)
-- **Communication**: REST API, gRPC for internal calls, publishes events to Kafka
+- **Communication**: REST API, publishes events to Kafka
 
-#### 3.1.5 Payment Service
-- **Purpose**: Payment processing, transaction management, and notifications
-- **Technology**: Node.js/Express or Python/FastAPI
-- **Database**: RDS PostgreSQL (transactions)
-- **Storage**: DynamoDB (session state, payment tokens, notification queue)
+#### 3.1.5 Progress Service
+- **Purpose**: Track student progress, completion status, time spent on courses
+- **Technology**: Node.js/Express
+- **Database**: RDS PostgreSQL (progress records)
 - **Deployment**: EKS (stateless)
-- **Communication**: REST API, publishes events to Kafka, consumes from Kafka for notifications
-- **Serverless Integration**: Triggers Lambda for async email/SMS notifications
+- **Communication**: REST API, publishes events to Kafka, consumes enrollment events from Kafka
+- **Features**: 
+  - Tracks progress percentage per course
+  - Records time spent
+  - Detects course completion
+  - Publishes completion events
 
 #### 3.1.6 Analytics Service (Provider B)
 - **Purpose**: Real-time analytics, learning pattern analysis
 - **Technology**: Python/FastAPI
-- **Database**: GCP Cloud SQL (analytics results)
-- **Storage**: GCS (analytics data exports)
-- **Deployment**: GKE (stateless)
+- **Database**: Azure Database for PostgreSQL (analytics results)
+- **Storage**: Azure Blob Storage (analytics data exports)
+- **Deployment**: AKS (stateless)
 - **Communication**: Consumes from Kafka results topic, REST API
 
 ### 3.2 Stream Processing Service
 
-#### 3.2.1 Flink Job (Provider B - Google Dataproc)
+#### 3.2.1 Flink Job (Provider B - Azure HDInsight)
 - **Purpose**: Real-time stream processing of learning events
 - **Technology**: Apache Flink (Java/Scala)
 - **Input**: Kafka topic `learning-events` (from Provider A MSK)
@@ -186,54 +190,52 @@ This platform enables students to browse courses, enroll in classes, make paymen
 - **Output**: Updates Course Service via REST API, publishes events to Kafka
 
 #### 3.3.2 AWS Lambda - Notification Processor
-- **Trigger**: SQS queue (from Payment Service)
-- **Function**: Async email/SMS sending
+- **Trigger**: SQS queue (from various services)
+- **Function**: Async email/SMS sending for course completions and other events
 - **Output**: Updates notification status in DynamoDB
 
 ## 4. Interconnection Mechanisms
 
 ### 4.1 Synchronous Communication
 - **REST APIs**: Primary communication for external and most internal services
-- **gRPC**: High-performance internal communication (Enrollment ↔ Payment)
+- **gRPC**: High-performance internal communication (can be used between services if needed)
 
 ### 4.2 Asynchronous Communication
 - **Kafka Topics**:
   - `user-events`: User registration, profile updates
   - `course-events`: Course creation, updates
   - `enrollment-events`: Enrollment creation, completion
-  - `payment-events`: Payment transactions
+  - `progress-events`: Progress updates and course completions
   - `learning-events`: Learning activity (page views, video watches, quiz attempts)
   - `analytics-results`: Aggregated analytics from Flink
 
 ### 4.3 Event Flow Examples
 1. **User Enrolls in Course**:
    - Web Service → Enrollment Service (REST)
-   - Enrollment Service → Payment Service (gRPC)
-   - Payment Service → Kafka (`payment-events`)
-   - Payment Service → Lambda (async email/SMS notification)
-   - Payment Service → DynamoDB (notification queue)
    - Enrollment Service → Kafka (`enrollment-events`)
+   - Progress Service → Consumes enrollment event → Initializes progress tracking
+   - Progress Service → Publishes progress events to Kafka
 
 2. **Learning Activity Analytics**:
    - Web Service → Kafka (`learning-events`)
-   - MSK → Flink (Dataproc) - processes events
+   - MSK → Flink (Azure HDInsight) - processes events
    - Flink → MSK (`analytics-results`)
-   - Analytics Service → Consumes results → Stores in Cloud SQL
+   - Analytics Service → Consumes results → Stores in Azure PostgreSQL
 
 ## 5. Infrastructure Components
 
 ### 5.1 Compute
 - **AWS EKS**: Managed Kubernetes for main microservices
-- **GCP GKE**: Managed Kubernetes for Analytics Service
-- **Google Dataproc**: Managed Flink cluster
+- **Azure AKS**: Managed Kubernetes for Analytics Service
+- **Azure HDInsight**: Managed Flink cluster
 - **AWS Lambda**: Serverless functions
 
 ### 5.2 Storage
 - **Amazon S3**: Course materials, user uploads
-- **Amazon RDS (PostgreSQL)**: Relational data (users, courses, enrollments, payments)
-- **Amazon DynamoDB**: Session state, notification queue, payment tokens
-- **GCP Cloud SQL (PostgreSQL)**: Analytics results
-- **GCP Cloud Storage**: Analytics data exports
+- **Amazon RDS (PostgreSQL)**: Relational data (users, courses, enrollments, progress)
+- **Amazon DynamoDB**: Session state, notification queue
+- **Azure Database for PostgreSQL**: Analytics results
+- **Azure Blob Storage**: Analytics data exports
 
 ### 5.3 Messaging
 - **Amazon MSK**: Managed Kafka cluster
@@ -241,7 +243,7 @@ This platform enables students to browse courses, enroll in classes, make paymen
 
 ### 5.4 Networking
 - **AWS VPC**: Multi-AZ setup with public/private subnets
-- **GCP VPC**: Analytics service network
+- **Azure Virtual Network**: Analytics service network
 - **VPN/Peering**: Cross-cloud connectivity
 
 ### 5.5 Observability
@@ -257,7 +259,7 @@ This platform enables students to browse courses, enroll in classes, make paymen
 ## 6. Design Rationale
 
 ### 6.1 Multi-Cloud Strategy
-- **Separation of Concerns**: Analytics workload on GCP leverages Dataproc's Flink capabilities
+- **Separation of Concerns**: Analytics workload on Azure leverages HDInsight's Flink capabilities
 - **Vendor Diversity**: Reduces vendor lock-in, demonstrates multi-cloud proficiency
 - **Cost Optimization**: Use best-in-class services from each provider
 
@@ -276,7 +278,7 @@ This platform enables students to browse courses, enroll in classes, make paymen
 - **RDS PostgreSQL**: ACID compliance for critical transactional data
 - **DynamoDB**: High-throughput, low-latency for session state and queues
 - **S3**: Cost-effective, scalable object storage
-- **Cloud SQL**: Managed database for analytics, reduces operational overhead
+- **Azure Database for PostgreSQL**: Managed database for analytics, reduces operational overhead
 
 ### 6.5 Kubernetes & HPA
 - **Managed K8s**: Reduces operational burden, automatic updates
@@ -294,7 +296,7 @@ This platform enables students to browse courses, enroll in classes, make paymen
 - **Real-time Monitoring**: Proactive issue detection
 
 ### 6.8 Stream Processing
-- **Flink on Dataproc**: Managed service reduces operational complexity
+- **Flink on Azure HDInsight**: Managed service reduces operational complexity
 - **Time-windowed Aggregations**: Real-time insights for learning analytics
 - **Stateful Processing**: Accurate aggregations over time windows
 
@@ -334,13 +336,13 @@ This platform enables students to browse courses, enroll in classes, make paymen
 ### 8.3 Application Security
 - **Authentication**: JWT tokens
 - **API Gateway**: Rate limiting, authentication
-- **Secrets Management**: AWS Secrets Manager / GCP Secret Manager
+- **Secrets Management**: AWS Secrets Manager / Azure Key Vault
 
 ## 9. Deployment Strategy
 
 ### 9.1 Infrastructure Provisioning
-1. Terraform applies infrastructure to AWS and GCP
-2. EKS and GKE clusters created
+1. Terraform applies infrastructure to AWS and Azure
+2. EKS and AKS clusters created
 3. Databases, storage, messaging services provisioned
 
 ### 9.2 Application Deployment
@@ -408,5 +410,5 @@ This platform enables students to browse courses, enroll in classes, make paymen
 - **Service Mesh**: Istio for advanced traffic management
 - **Advanced Analytics**: ML models for personalized recommendations
 - **CDN**: CloudFront/Cloud CDN for static content
-- **API Gateway**: AWS API Gateway / GCP API Gateway
+- **API Gateway**: AWS API Gateway / Azure API Management
 
